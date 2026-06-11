@@ -36,6 +36,16 @@
         }
         button:hover { background: #ff8833; }
         .slider { width: 140px; cursor: pointer; }
+        /* Циферки времени с инвертированным цветом (всегда читаемы) */
+        #timeDisplay {
+            background: black;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 2px black;
+            mix-blend-mode: difference; /* делает цвет инвертированным относительно фона */
+        }
         @media (max-width: 700px) {
             #controls { flex-direction: column; align-items: stretch; gap: 8px; }
             .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -65,7 +75,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // --- СЦЕНА, КАМЕРА, РЕНДЕР ---
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a1030); // ночной синий
+scene.background = new THREE.Color(0x0a1030);
 scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.set(5, 3, 8);
@@ -74,31 +84,30 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// Управление камерой
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.target.set(0, 0.5, 0);
 
-// --- ОСВЕЩЕНИЕ (динамическое) ---
-const ambientLight = new THREE.AmbientLight(0x404060);
-scene.add(ambientLight);
+// --- ОСВЕЩЕНИЕ ---
+const ambient = new THREE.AmbientLight(0x404060);
+scene.add(ambient);
 const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
 dirLight.position.set(5, 10, 7);
 dirLight.castShadow = true;
 scene.add(dirLight);
-const fillLight = new THREE.PointLight(0x88aaff, 0.3);
-fillLight.position.set(0, 2, 0);
-scene.add(fillLight);
+const fill = new THREE.PointLight(0x88aaff, 0.3);
+fill.position.set(0, 2, 0);
+scene.add(fill);
 
-// Солнце и Луна
-const sunMat = new THREE.MeshStandardMaterial({ color: 0xffaa66, emissive: 0xff4411, emissiveIntensity: 0.8 });
-const sun = new THREE.Mesh(new THREE.SphereGeometry(1.2, 64, 64), sunMat);
-scene.add(sun);
-const moonMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0x88aaff, emissiveIntensity: 0.2 });
-const moon = new THREE.Mesh(new THREE.SphereGeometry(0.9, 64, 64), moonMat);
-scene.add(moon);
+// Солнце и луна (будут появляться по очереди)
+const sunMat = new THREE.MeshStandardMaterial({ color: 0xffaa66, emissive: 0xff4411, emissiveIntensity: 0 });
+const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(1.2, 64, 64), sunMat);
+scene.add(sunMesh);
+const moonMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0x88aaff, emissiveIntensity: 0 });
+const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(0.9, 64, 64), moonMat);
+scene.add(moonMesh);
 
-// Фара (прожектор, привяжем к машине)
+// Прожектор фар (будет привязан к машине)
 const headlightSpot = new THREE.SpotLight(0xffaa66, 1.2);
 headlightSpot.angle = 0.5;
 headlightSpot.penumbra = 0.3;
@@ -106,8 +115,7 @@ headlightSpot.distance = 15;
 headlightSpot.castShadow = true;
 
 // --- ДОРОГА ---
-const roadMat = new THREE.MeshStandardMaterial({ color: 0x2c2e3a });
-const roadPlane = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 80), roadMat);
+const roadPlane = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 80), new THREE.MeshStandardMaterial({ color: 0x2c2e3a }));
 roadPlane.rotation.x = -Math.PI/2;
 roadPlane.position.y = -0.2;
 roadPlane.receiveShadow = true;
@@ -127,7 +135,6 @@ for (let i = -40; i <= 40; i+=3) {
 // --- ЛАНДШАФТ (только по бокам) ---
 const landscapeGroup = new THREE.Group();
 scene.add(landscapeGroup);
-
 function addScenery() {
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
     const crownMat = new THREE.MeshStandardMaterial({ color: 0x5A9E4E });
@@ -141,7 +148,6 @@ function addScenery() {
         left.position.set(-4.8, -0.2, i);
         left.castShadow = true;
         landscapeGroup.add(left);
-
         const right = new THREE.Group();
         right.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1), trunkMat));
         right.children[0].position.y = 0;
@@ -190,17 +196,20 @@ addScenery();
 
 // --- МАШИНКА ---
 const car = new THREE.Group();
+// Кузов
 const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.55, 2.2), new THREE.MeshStandardMaterial({ color: 0xe34234, metalness: 0.7 }));
 body.position.y = 0.3;
 body.castShadow = true;
 car.add(body);
+// Кабина
 const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.45, 1.1), new THREE.MeshStandardMaterial({ color: 0x88aaff, transparent: true, opacity: 0.7 }));
 cabin.position.set(0, 0.55, -0.4);
 car.add(cabin);
+// Колёса
 const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.45, 24);
-const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222 });
+const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
 const wheels = [];
-[[-0.75,0.15,0.85],[0.75,0.15,0.85],[-0.75,0.15,-0.85],[0.75,0.15,-0.85]].forEach(p=>{
+[[-0.75,0.15,0.85],[0.75,0.15,0.85],[-0.75,0.15,-0.85],[0.75,0.15,-0.85]].forEach(p => {
     const w = new THREE.Mesh(wheelGeo, wheelMat);
     w.rotation.z = Math.PI/2;
     w.position.set(p[0], p[1], p[2]);
@@ -208,13 +217,10 @@ const wheels = [];
     car.add(w);
     wheels.push(w);
 });
+// Фара (передняя)
 const headlightObj = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshStandardMaterial({ color: 0xffaa66, emissiveIntensity: 0 }));
 headlightObj.position.set(0, 0.25, 1.15);
 car.add(headlightObj);
-scene.add(car);
-car.add(headlightSpot);
-headlightSpot.position.set(0, 0.4, 1.2);
-
 // Выхлоп (частицы)
 const particleCount = 180;
 const particleGeo = new THREE.BufferGeometry();
@@ -222,16 +228,18 @@ const posArray = new Float32Array(particleCount*3);
 particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 const particles = new THREE.Points(particleGeo, new THREE.PointsMaterial({ color: 0xaaa, size: 0.07, transparent: true }));
 car.add(particles);
-let exhaustOn = false;
+scene.add(car);
+car.add(headlightSpot);
+headlightSpot.position.set(0, 0.4, 1.2);
 
-// --- АНИМАЦИЯ ПОЛОСОК И ЛАНДШАФТА ---
+// --- ДВИЖЕНИЕ ПОЛОСОК И ЛАНДШАФТА (бесконечная дорога) ---
 let scroll = 0;
 const speed = 0.12;
-function updateLandscape() {
-    requestAnimationFrame(updateLandscape);
+function updateScenery() {
+    requestAnimationFrame(updateScenery);
     scroll += speed;
-    lines.forEach((line, i) => {
-        let z = -40 + i * 3;
+    lines.forEach((line, idx) => {
+        let z = -40 + idx * 3;
         z += scroll;
         if (z > 40) z -= 80;
         line.position.z = z;
@@ -241,49 +249,55 @@ function updateLandscape() {
         if (obj.position.z < -48) obj.position.z += 96;
     });
 }
-updateLandscape();
+updateScenery();
 
-// --- УПРАВЛЕНИЕ ВРЕМЕНЕМ (исправлено: небо меняет цвет плавно, время отображается) ---
+// --- УПРАВЛЕНИЕ ВРЕМЕНЕМ (солнце/луна, цвет неба, освещение) ---
 const timeSlider = document.getElementById('timeSlider');
 const timeDisplay = document.getElementById('timeDisplay');
 
-function setTime(hour) {
+function updateTime(hour) {
     const h = Math.floor(hour);
     const m = Math.floor((hour % 1) * 60);
     timeDisplay.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
     
-    // Позиция солнца и луны
     const angle = (hour / 24) * Math.PI * 2;
     const radius = 18;
     const sunY = Math.sin(angle) * radius;
     const sunX = Math.cos(angle) * radius;
-    sun.position.set(sunX, sunY + 2, -8);
-    moon.position.set(sunX + (hour < 12 ? 12 : -12), sunY + 1, -6);
     
-    // Интенсивность света
+    // Солнце и луна невидимы в нерабочее время
+    const sunVisible = Math.sin(angle) > 0.1;
+    const moonVisible = Math.sin(angle) < -0.1;
+    sunMesh.visible = sunVisible;
+    moonMesh.visible = moonVisible;
+    
+    if (sunVisible) {
+        sunMesh.position.set(sunX, sunY + 2, -8);
+        sunMesh.material.emissiveIntensity = Math.max(0, Math.sin(angle)) * 1.5;
+    }
+    if (moonVisible) {
+        moonMesh.position.set(sunX + (hour < 12 ? 12 : -12), sunY + 1, -6);
+        moonMesh.material.emissiveIntensity = Math.max(0, -Math.sin(angle)) * 0.5;
+    }
+    
     let intensity = Math.max(0, Math.sin(angle)) * 1.2;
     if (intensity < 0.1) intensity = 0.1;
     dirLight.intensity = intensity;
-    ambientLight.intensity = 0.3 + intensity * 0.3;
+    ambient.intensity = 0.3 + intensity * 0.3;
     
-    // Цвет неба: интерполяция между ночным (0x0a1030) и дневным (0x87CEEB)
-    const t = Math.sin(angle); // -1..1, но нам нужно 0..1
-    const blend = Math.max(0, Math.min(1, (t + 1) / 2));
+    // Цвет неба: плавная смена от ночного (0x0a1030) до дневного (0x87CEEB)
+    const blend = Math.max(0, Math.min(1, (Math.sin(angle) + 1) / 2));
     const nightColor = new THREE.Color(0x0a1030);
     const dayColor = new THREE.Color(0x87CEEB);
     const skyColor = nightColor.clone().lerp(dayColor, blend);
     scene.background = skyColor;
     scene.fog.color = skyColor;
-    
-    // Яркость солнца и луны
-    sun.material.emissiveIntensity = Math.max(0, Math.sin(angle)) * 1.5;
-    moon.material.emissiveIntensity = Math.max(0, -Math.sin(angle)) * 0.5;
 }
 
-timeSlider.addEventListener('input', (e) => setTime(parseFloat(e.target.value)));
-setTime(14);  // начальное значение
+timeSlider.addEventListener('input', e => updateTime(parseFloat(e.target.value)));
+updateTime(14); // стартовое время
 
-// --- ФАРЫ ---
+// --- ФАРЫ (работают) ---
 let lightsOn = true;
 const lightsBtn = document.getElementById('lightsBtn');
 lightsBtn.addEventListener('click', () => {
@@ -294,7 +308,8 @@ lightsBtn.addEventListener('click', () => {
     lightsBtn.style.background = lightsOn ? '#ff6600' : '#444';
 });
 
-// --- ВЫХЛОП ---
+// --- ВЫХЛОП (работает) ---
+let exhaustOn = false;
 const exhaustBtn = document.getElementById('exhaustBtn');
 exhaustBtn.addEventListener('click', () => {
     exhaustOn = !exhaustOn;
@@ -303,7 +318,11 @@ exhaustBtn.addEventListener('click', () => {
 });
 
 function updateExhaust() {
-    if (!exhaustOn) { particles.visible = false; return; }
+    if (!exhaustOn) {
+        particles.visible = false;
+        requestAnimationFrame(updateExhaust);
+        return;
+    }
     particles.visible = true;
     const positions = particles.geometry.attributes.position.array;
     for (let i = 0; i < particleCount; i++) {
@@ -325,14 +344,13 @@ function updateExhaust() {
 }
 updateExhaust();
 
-// --- МУЗЫКА (простой HTMLAudioElement, работает по кнопке) ---
+// --- МУЗЫКА ---
 const musicBtn = document.getElementById('musicBtn');
 let audio = null;
 let musicPlaying = false;
-
 musicBtn.addEventListener('click', () => {
     if (!audio) {
-        audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+        audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
         audio.loop = true;
         audio.volume = 0.5;
     }
@@ -346,7 +364,7 @@ musicBtn.addEventListener('click', () => {
             musicPlaying = true;
             musicBtn.textContent = '🎵 Выкл музыку';
             musicBtn.style.background = '#444';
-        }).catch(e => console.log('Автозапуск заблокирован, но по кнопке работает'));
+        }).catch(e => console.log('Музыка не включилась автоматически, но по кнопке работает'));
     }
 });
 
@@ -361,12 +379,12 @@ function animateCar() {
 animateCar();
 
 // --- РЕНДЕРИНГ ---
-function renderLoop() {
-    requestAnimationFrame(renderLoop);
+function render() {
+    requestAnimationFrame(render);
     controls.update();
     renderer.render(scene, camera);
 }
-renderLoop();
+render();
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -374,7 +392,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-console.log('🏁 Всё исправлено: время показывает, небо красивое, кнопки работают, музыка включается.');
+console.log('🏁 Готово! Фары, выхлоп, солнце, луна, полоски — всё работает.');
 </script>
 </body>
 </html>
