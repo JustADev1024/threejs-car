@@ -83,7 +83,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a1030);
 scene.fog = new THREE.FogExp2(0x0a1030, 0.005);
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
-camera.position.set(5, 3, 8);
+camera.position.set(5, 3.5, 9);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
@@ -112,7 +112,7 @@ const moonMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, emissive: 0x88
 const moonMesh = new THREE.Mesh(new THREE.SphereGeometry(0.9, 64, 64), moonMat);
 scene.add(moonMesh);
 
-// --- ФАРЫ (прожектор и точка) ---
+// --- ФАРЫ ---
 const headlightSpot = new THREE.SpotLight(0xffaa66, 0);
 headlightSpot.angle = 0.6;
 headlightSpot.penumbra = 0.2;
@@ -121,14 +121,38 @@ headlightSpot.castShadow = true;
 const headlightPoint = new THREE.PointLight(0xffaa66, 0, 15);
 headlightPoint.castShadow = true;
 
+// --- ОСНОВНАЯ ТРАВА (плоскость под весь ландшафт) ---
+const grassPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(60, 120),
+    new THREE.MeshStandardMaterial({ color: 0x5c9e3a, roughness: 0.9, metalness: 0.1 })
+);
+grassPlane.rotation.x = -Math.PI / 2;
+grassPlane.position.y = -0.3;
+grassPlane.receiveShadow = true;
+scene.add(grassPlane);
+
 // --- ДОРОГА ---
-const roadPlane = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 80), new THREE.MeshStandardMaterial({ color: 0x2c2e3a }));
+const roadPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.5, 80),
+    new THREE.MeshStandardMaterial({ color: 0x2c2e3a, roughness: 0.6 })
+);
 roadPlane.rotation.x = -Math.PI/2;
 roadPlane.position.y = -0.2;
 roadPlane.receiveShadow = true;
 scene.add(roadPlane);
 
-// Полоски разметки
+// --- БОРДЮРЫ ВДОЛЬ ДОРОГИ (тонкие длинные параллелепипеды) ---
+const curbMat = new THREE.MeshStandardMaterial({ color: 0xaa9966 });
+const curbLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 80), curbMat);
+curbLeft.position.set(-2.35, -0.15, 0);
+curbLeft.receiveShadow = true;
+scene.add(curbLeft);
+const curbRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 80), curbMat);
+curbRight.position.set(2.35, -0.15, 0);
+curbRight.receiveShadow = true;
+scene.add(curbRight);
+
+// --- ПОЛОСКИ РАЗМЕТКИ ---
 const lineMat = new THREE.MeshStandardMaterial({ color: 0xffdd99 });
 const lines = [];
 for (let i = -40; i <= 40; i+=3) {
@@ -139,15 +163,16 @@ for (let i = -40; i <= 40; i+=3) {
     lines.push(line);
 }
 
-// --- ЛАНДШАФТ (всё на земле, без зависаний) ---
+// --- ЛАНДШАФТ (деревья, холмы, камни) ---
 const landscapeGroup = new THREE.Group();
 scene.add(landscapeGroup);
 
 function addScenery() {
+    // Деревья
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
     const crownMat = new THREE.MeshStandardMaterial({ color: 0x5A9E4E });
     for (let i = -35; i <= 35; i+=4) {
-        // Левое дерево
+        // Левое
         const leftGroup = new THREE.Group();
         const trunkL = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1), trunkMat);
         trunkL.position.y = 0.5;
@@ -156,9 +181,9 @@ function addScenery() {
         crownL.position.y = 1.1;
         crownL.castShadow = true;
         leftGroup.add(trunkL, crownL);
-        leftGroup.position.set(-4.8, -0.2, i);
+        leftGroup.position.set(-4.8, -0.25, i);
         landscapeGroup.add(leftGroup);
-        // Правое дерево
+        // Правое
         const rightGroup = new THREE.Group();
         const trunkR = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1), trunkMat);
         trunkR.position.y = 0.5;
@@ -167,39 +192,42 @@ function addScenery() {
         crownR.position.y = 1.1;
         crownR.castShadow = true;
         rightGroup.add(trunkR, crownR);
-        rightGroup.position.set(4.8, -0.2, i);
+        rightGroup.position.set(4.8, -0.25, i);
         landscapeGroup.add(rightGroup);
     }
+    // Холмы
     const hillMat = new THREE.MeshStandardMaterial({ color: 0x6a9e4b });
     for (let i = -30; i <= 30; i+=6) {
         for (let side of [-1,1]) {
             const x = side * (5 + Math.random()*1.5);
             if (Math.abs(x) < 2.8) continue;
             const hill = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16), hillMat);
-            hill.position.set(x, -0.3, i + (Math.random()-0.5)*3);
+            hill.position.set(x, -0.35, i + (Math.random()-0.5)*3);
             hill.scale.set(1.5, 0.5, 1.5);
             hill.castShadow = true;
             landscapeGroup.add(hill);
         }
     }
+    // Камни
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
-    for (let i=0;i<120;i++) {
+    for (let i=0;i<140;i++) {
         const z = (Math.random()-0.5)*80;
         const x = (Math.random()-0.5)*12;
         if (Math.abs(x) < 2.5) continue;
         const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15), stoneMat);
-        stone.position.set(x, -0.25, z);
+        stone.position.set(x, -0.3, z);
         stone.scale.set(1,0.6,0.8);
         stone.castShadow = true;
         landscapeGroup.add(stone);
     }
-    const grassMat = new THREE.MeshStandardMaterial({ color: 0x5cad3a });
-    for (let i=0;i<300;i++) {
+    // Трава (кустики) – мелкие конусы
+    const grassMat2 = new THREE.MeshStandardMaterial({ color: 0x5cad3a });
+    for (let i=0;i<400;i++) {
         const z = (Math.random()-0.5)*90;
         const x = (Math.random()-0.5)*12;
         if (Math.abs(x) < 2.8) continue;
-        const grass = new THREE.Mesh(new THREE.ConeGeometry(0.1,0.3,3), grassMat);
-        grass.position.set(x, -0.2, z);
+        const grass = new THREE.Mesh(new THREE.ConeGeometry(0.1,0.3,3), grassMat2);
+        grass.position.set(x, -0.25, z);
         grass.castShadow = false;
         landscapeGroup.add(grass);
     }
@@ -208,25 +236,27 @@ addScenery();
 
 // --- МАШИНКА ---
 const car = new THREE.Group();
-const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.55, 2.2), new THREE.MeshStandardMaterial({ color: 0xe34234, metalness: 0.7 }));
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe34234, metalness: 0.7 });
+const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.55, 2.2), bodyMat);
 body.position.y = 0.3;
 body.castShadow = true;
 car.add(body);
-const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.45, 1.1), new THREE.MeshStandardMaterial({ color: 0x88aaff, transparent: true, opacity: 0.7 }));
+const cabinMat = new THREE.MeshStandardMaterial({ color: 0x88aaff, transparent: true, opacity: 0.7 });
+const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.45, 1.1), cabinMat);
 cabin.position.set(0, 0.55, -0.4);
 car.add(cabin);
 const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.45, 24);
-const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+const wheelMatCar = new THREE.MeshStandardMaterial({ color: 0x222222 });
 const wheels = [];
 [[-0.75,0.15,0.85],[0.75,0.15,0.85],[-0.75,0.15,-0.85],[0.75,0.15,-0.85]].forEach(p => {
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    const w = new THREE.Mesh(wheelGeo, wheelMatCar);
     w.rotation.z = Math.PI/2;
     w.position.set(p[0], p[1], p[2]);
     w.castShadow = true;
     car.add(w);
     wheels.push(w);
 });
-// Фара – модель с эмиссией
+// Фара
 const headlightModel = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 32), new THREE.MeshStandardMaterial({
     color: 0xffaa66,
     emissive: 0xff4422,
@@ -234,24 +264,23 @@ const headlightModel = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 32), ne
 }));
 headlightModel.position.set(0, 0.25, 1.15);
 car.add(headlightModel);
-// Световые источники
 car.add(headlightSpot);
 headlightSpot.position.set(0, 0.3, 1.3);
 car.add(headlightPoint);
 headlightPoint.position.set(0, 0.3, 1.2);
 scene.add(car);
 
-// Выхлоп (частицы) – серые, не синие
+// --- ВЫХЛОП (частицы) ---
 const particleCount = 200;
 const particleGeo = new THREE.BufferGeometry();
 const posArray = new Float32Array(particleCount*3);
 particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-const particleMaterial = new THREE.PointsMaterial({ color: 0xccccaa, size: 0.08, transparent: true, opacity: 0.8 });
-const particles = new THREE.Points(particleGeo, particleMaterial);
+const particleMat = new THREE.PointsMaterial({ color: 0xccccaa, size: 0.08, transparent: true });
+const particles = new THREE.Points(particleGeo, particleMat);
 car.add(particles);
 let exhaustOn = false;
 
-// --- ДВИЖЕНИЕ ЛАНДШАФТА И ПОЛОСОК ---
+// --- АНИМАЦИЯ ДОРОГИ И ЛАНДШАФТА ---
 let scroll = 0;
 const speed = 0.12;
 function updateScenery() {
@@ -270,10 +299,9 @@ function updateScenery() {
 }
 updateScenery();
 
-// --- УПРАВЛЕНИЕ ВРЕМЕНЕМ ---
+// --- ВРЕМЯ СУТОК ---
 const timeSlider = document.getElementById('timeSlider');
 const timeDisplay = document.getElementById('timeDisplay');
-
 function updateTime(hour) {
     const h = Math.floor(hour);
     const m = Math.floor((hour % 1) * 60);
@@ -351,12 +379,11 @@ function updateExhaust() {
 }
 updateExhaust();
 
-// --- МУЗЫКА С ВЫБОРОМ ТРЕКА ---
+// --- МУЗЫКА ---
 let audio = null;
 let musicPlaying = false;
 const trackSelect = document.getElementById('trackSelect');
 const musicBtn = document.getElementById('musicBtn');
-
 function playTrack() {
     if (!audio) {
         audio = new Audio();
@@ -364,42 +391,26 @@ function playTrack() {
         audio.volume = 0.5;
     }
     const url = trackSelect.value;
-    if (audio.src !== url) {
-        audio.src = url;
-    }
+    if (audio.src !== url) audio.src = url;
     audio.play().then(() => {
         musicPlaying = true;
         musicBtn.textContent = '🔇 Выкл';
         musicBtn.style.background = '#444';
-    }).catch(e => console.log('Нужен клик для музыки'));
+    }).catch(e => console.log('Клик для музыки'));
 }
 function stopTrack() {
-    if (audio) {
-        audio.pause();
-        musicPlaying = false;
-        musicBtn.textContent = '🎵 Вкл';
-        musicBtn.style.background = '#ff6600';
-    }
+    if (audio) { audio.pause(); musicPlaying = false; musicBtn.textContent = '🎵 Вкл'; musicBtn.style.background = '#ff6600'; }
 }
-musicBtn.addEventListener('click', () => {
-    if (musicPlaying) {
-        stopTrack();
-    } else {
-        playTrack();
-    }
-});
-// При смене трека, если музыка играет, переключаем
+musicBtn.addEventListener('click', () => { musicPlaying ? stopTrack() : playTrack(); });
 trackSelect.addEventListener('change', () => {
     if (musicPlaying) {
-        const wasPlaying = musicPlaying;
+        const was = musicPlaying;
         stopTrack();
-        if (wasPlaying) {
-            setTimeout(() => playTrack(), 100);
-        }
+        if (was) setTimeout(() => playTrack(), 100);
     }
 });
 
-// --- АНИМАЦИЯ КОЛЁС ---
+// --- КОЛЁСА ---
 let wheelAngle = 0;
 function animateCar() {
     requestAnimationFrame(animateCar);
@@ -410,12 +421,12 @@ function animateCar() {
 animateCar();
 
 // --- РЕНДЕРИНГ ---
-function render() {
-    requestAnimationFrame(render);
+function renderLoop() {
+    requestAnimationFrame(renderLoop);
     controls.update();
     renderer.render(scene, camera);
 }
-render();
+renderLoop();
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -424,4 +435,4 @@ window.addEventListener('resize', () => {
 });
 </script>
 </body>
-    </html>
+</html>
