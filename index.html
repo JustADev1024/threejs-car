@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Dream Car • Чайтанья😃 </title>
+    <title>Dream Car • Чайтанья</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: system-ui; }
         #controls {
@@ -24,7 +24,7 @@
             border: 1px solid rgba(255,255,255,0.2);
             font-size: 14px;
         }
-        button {
+        button, select {
             background: #ff6600;
             border: none;
             padding: 6px 14px;
@@ -53,9 +53,16 @@
 <body>
 <div id="controls">
     <div class="row">🌞🌙 <input type="range" id="timeSlider" min="0" max="24" step="0.1" value="14" class="slider"> <span id="timeDisplay">14:00</span></div>
-    <div class="row">💡 <button id="lightsBtn">Фары Вкл</button></div>
+    <div class="row">💡 <button id="lightsBtn">Фары Выкл</button></div>
     <div class="row">💨 <button id="exhaustBtn">Выхлоп Выкл</button></div>
-    <div class="row">🎵 <button id="musicBtn">🎵 Вкл музыку</button></div>
+    <div class="row">
+        🎵 <select id="trackSelect">
+            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">Трек 1</option>
+            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3">Трек 2</option>
+            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3">Трек 3</option>
+        </select>
+        <button id="musicBtn">🎵 Вкл</button>
+    </div>
 </div>
 
 <script type="importmap">
@@ -86,7 +93,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.target.set(0, 0.5, 0);
 
-// --- ОСВЕЩЕНИЕ (будет меняться от времени) ---
+// --- ОСВЕЩЕНИЕ ---
 const ambientLight = new THREE.AmbientLight(0x404060);
 scene.add(ambientLight);
 const dirLight = new THREE.DirectionalLight(0xfff5e6, 1.2);
@@ -132,31 +139,36 @@ for (let i = -40; i <= 40; i+=3) {
     lines.push(line);
 }
 
-// --- ЛАНДШАФТ (по бокам) ---
+// --- ЛАНДШАФТ (всё на земле, без зависаний) ---
 const landscapeGroup = new THREE.Group();
 scene.add(landscapeGroup);
+
 function addScenery() {
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
     const crownMat = new THREE.MeshStandardMaterial({ color: 0x5A9E4E });
     for (let i = -35; i <= 35; i+=4) {
-        const left = new THREE.Group();
-        left.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1), trunkMat));
-        left.children[0].position.y = 0;
+        // Левое дерево
+        const leftGroup = new THREE.Group();
+        const trunkL = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1), trunkMat);
+        trunkL.position.y = 0.5;
+        trunkL.castShadow = true;
         const crownL = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.2, 6), crownMat);
-        crownL.position.y = 0.8;
-        left.add(crownL);
-        left.position.set(-4.8, -0.2, i);
-        left.castShadow = true;
-        landscapeGroup.add(left);
-        const right = new THREE.Group();
-        right.add(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1), trunkMat));
-        right.children[0].position.y = 0;
+        crownL.position.y = 1.1;
+        crownL.castShadow = true;
+        leftGroup.add(trunkL, crownL);
+        leftGroup.position.set(-4.8, -0.2, i);
+        landscapeGroup.add(leftGroup);
+        // Правое дерево
+        const rightGroup = new THREE.Group();
+        const trunkR = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1), trunkMat);
+        trunkR.position.y = 0.5;
+        trunkR.castShadow = true;
         const crownR = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.2, 6), crownMat);
-        crownR.position.y = 0.8;
-        right.add(crownR);
-        right.position.set(4.8, -0.2, i);
-        right.castShadow = true;
-        landscapeGroup.add(right);
+        crownR.position.y = 1.1;
+        crownR.castShadow = true;
+        rightGroup.add(trunkR, crownR);
+        rightGroup.position.set(4.8, -0.2, i);
+        landscapeGroup.add(rightGroup);
     }
     const hillMat = new THREE.MeshStandardMaterial({ color: 0x6a9e4b });
     for (let i = -30; i <= 30; i+=6) {
@@ -196,16 +208,13 @@ addScenery();
 
 // --- МАШИНКА ---
 const car = new THREE.Group();
-// Кузов
 const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.55, 2.2), new THREE.MeshStandardMaterial({ color: 0xe34234, metalness: 0.7 }));
 body.position.y = 0.3;
 body.castShadow = true;
 car.add(body);
-// Кабина
 const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.45, 1.1), new THREE.MeshStandardMaterial({ color: 0x88aaff, transparent: true, opacity: 0.7 }));
 cabin.position.set(0, 0.55, -0.4);
 car.add(cabin);
-// Колёса
 const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.45, 24);
 const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
 const wheels = [];
@@ -221,19 +230,18 @@ const wheels = [];
 const headlightModel = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 32), new THREE.MeshStandardMaterial({
     color: 0xffaa66,
     emissive: 0xff4422,
-    emissiveIntensity: 1.2,
-    toneMapped: true
+    emissiveIntensity: 0
 }));
 headlightModel.position.set(0, 0.25, 1.15);
 car.add(headlightModel);
-// Добавляем световые источники к машине
+// Световые источники
 car.add(headlightSpot);
 headlightSpot.position.set(0, 0.3, 1.3);
 car.add(headlightPoint);
 headlightPoint.position.set(0, 0.3, 1.2);
 scene.add(car);
 
-// Выхлоп (частицы) – теперь не будут синими, используем PointsMaterial без освещения
+// Выхлоп (частицы) – серые, не синие
 const particleCount = 200;
 const particleGeo = new THREE.BufferGeometry();
 const posArray = new Float32Array(particleCount*3);
@@ -262,7 +270,7 @@ function updateScenery() {
 }
 updateScenery();
 
-// --- УПРАВЛЕНИЕ ВРЕМЕНЕМ (исправлено: теперь 12 часов – максимум света) ---
+// --- УПРАВЛЕНИЕ ВРЕМЕНЕМ ---
 const timeSlider = document.getElementById('timeSlider');
 const timeDisplay = document.getElementById('timeDisplay');
 
@@ -270,19 +278,14 @@ function updateTime(hour) {
     const h = Math.floor(hour);
     const m = Math.floor((hour % 1) * 60);
     timeDisplay.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
-    
-    // Угол: 0 часов = 0, 12 часов = PI, 24 часа = 2PI
-    const angle = (hour / 12) * Math.PI;  // теперь в полдень angle = PI
+    const angle = (hour / 12) * Math.PI;
     const radius = 18;
     const sunY = Math.sin(angle) * radius;
     const sunX = Math.cos(angle) * radius;
-    
-    // Солнце видно при sin(angle) > 0 (с 0 до 12 часов), луна – при sin(angle) < 0 (с 12 до 24)
     const sunVisible = Math.sin(angle) > 0;
     const moonVisible = Math.sin(angle) < 0;
     sunMesh.visible = sunVisible;
     moonMesh.visible = moonVisible;
-    
     if (sunVisible) {
         sunMesh.position.set(sunX, sunY + 2, -8);
         sunMesh.material.emissiveIntensity = Math.sin(angle) * 1.5;
@@ -291,55 +294,42 @@ function updateTime(hour) {
         moonMesh.position.set(-sunX, sunY + 1, -6);
         moonMesh.material.emissiveIntensity = -Math.sin(angle) * 0.5;
     }
-    
-    // Интенсивность света: максимум при angle = PI (12 часов)
-    let intensity = (1 - Math.cos(angle)) / 2;  // даёт 0 в 0ч, 1 в 12ч, 0 в 24ч
-    intensity = Math.max(0.1, intensity * 1.2);  // немного фона
+    let intensity = (1 - Math.cos(angle)) / 2;
+    intensity = Math.max(0.1, intensity * 1.2);
     dirLight.intensity = intensity;
     ambientLight.intensity = 0.3 + intensity * 0.3;
-    
-    // Цвет неба: интерполяция от ночного к дневному
     const nightColor = new THREE.Color(0x0a1030);
     const dayColor = new THREE.Color(0x87CEEB);
     const skyColor = nightColor.clone().lerp(dayColor, intensity);
     scene.background = skyColor;
     scene.fog.color = skyColor;
 }
-
 timeSlider.addEventListener('input', e => updateTime(parseFloat(e.target.value)));
-updateTime(14); // 14:00
+updateTime(14);
 
-// --- ФАРЫ (теперь реально включают свет) ---
+// --- ФАРЫ ---
 let lightsOn = true;
 const lightsBtn = document.getElementById('lightsBtn');
 lightsBtn.addEventListener('click', () => {
     lightsOn = !lightsOn;
-    // Меняем эмиссию материала фары
     headlightModel.material.emissiveIntensity = lightsOn ? 1.2 : 0;
-    // Включаем/выключаем источники света
     headlightSpot.intensity = lightsOn ? 1.5 : 0;
     headlightPoint.intensity = lightsOn ? 0.8 : 0;
     lightsBtn.textContent = lightsOn ? "Фары Выкл" : "Фары Вкл";
     lightsBtn.style.background = lightsOn ? '#ff6600' : '#444';
 });
-// Изначально включаем фары (по желанию)
 headlightSpot.intensity = 1.5;
 headlightPoint.intensity = 0.8;
 
-// --- ВЫХЛОП (серые частицы, без синевы) ---
+// --- ВЫХЛОП ---
 const exhaustBtn = document.getElementById('exhaustBtn');
 exhaustBtn.addEventListener('click', () => {
     exhaustOn = !exhaustOn;
     exhaustBtn.textContent = exhaustOn ? "Выхлоп Вкл" : "Выхлоп Выкл";
     exhaustBtn.style.background = exhaustOn ? '#ff6600' : '#444';
 });
-
 function updateExhaust() {
-    if (!exhaustOn) {
-        particles.visible = false;
-        requestAnimationFrame(updateExhaust);
-        return;
-    }
+    if (!exhaustOn) { particles.visible = false; requestAnimationFrame(updateExhaust); return; }
     particles.visible = true;
     const positions = particles.geometry.attributes.position.array;
     for (let i = 0; i < particleCount; i++) {
@@ -361,31 +351,55 @@ function updateExhaust() {
 }
 updateExhaust();
 
-// --- МУЗЫКА ---
-const musicBtn = document.getElementById('musicBtn');
+// --- МУЗЫКА С ВЫБОРОМ ТРЕКА ---
 let audio = null;
 let musicPlaying = false;
-musicBtn.addEventListener('click', () => {
+const trackSelect = document.getElementById('trackSelect');
+const musicBtn = document.getElementById('musicBtn');
+
+function playTrack() {
     if (!audio) {
-        audio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3');
+        audio = new Audio();
         audio.loop = true;
         audio.volume = 0.5;
     }
-    if (musicPlaying) {
+    const url = trackSelect.value;
+    if (audio.src !== url) {
+        audio.src = url;
+    }
+    audio.play().then(() => {
+        musicPlaying = true;
+        musicBtn.textContent = '🔇 Выкл';
+        musicBtn.style.background = '#444';
+    }).catch(e => console.log('Нужен клик для музыки'));
+}
+function stopTrack() {
+    if (audio) {
         audio.pause();
         musicPlaying = false;
-        musicBtn.textContent = '🎵 Вкл музыку';
+        musicBtn.textContent = '🎵 Вкл';
         musicBtn.style.background = '#ff6600';
+    }
+}
+musicBtn.addEventListener('click', () => {
+    if (musicPlaying) {
+        stopTrack();
     } else {
-        audio.play().then(() => {
-            musicPlaying = true;
-            musicBtn.textContent = '🎵 Выкл музыку';
-            musicBtn.style.background = '#444';
-        }).catch(e => console.log('Музыка: нужен клик по странице'));
+        playTrack();
+    }
+});
+// При смене трека, если музыка играет, переключаем
+trackSelect.addEventListener('change', () => {
+    if (musicPlaying) {
+        const wasPlaying = musicPlaying;
+        stopTrack();
+        if (wasPlaying) {
+            setTimeout(() => playTrack(), 100);
+        }
     }
 });
 
-// --- АНИМАЦИЯ КОЛЁС И ПОДПРЫГИВАНИЕ ---
+// --- АНИМАЦИЯ КОЛЁС ---
 let wheelAngle = 0;
 function animateCar() {
     requestAnimationFrame(animateCar);
@@ -408,8 +422,6 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-console.log('🏁 Готово! Фары светят, выхлоп серый, освещение правильное (12 дня – свет, ночи – темно).');
 </script>
 </body>
-</html>
+    </html>
