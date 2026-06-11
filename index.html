@@ -121,7 +121,7 @@ headlightSpot.castShadow = true;
 const headlightPoint = new THREE.PointLight(0xffaa66, 0, 15);
 headlightPoint.castShadow = true;
 
-// --- ТРАВА ---
+// --- ТРАВА (основание) ---
 const grassPlane = new THREE.Mesh(
     new THREE.PlaneGeometry(60, 120),
     new THREE.MeshStandardMaterial({ color: 0x5c9e3a, roughness: 0.9, metalness: 0.1 })
@@ -152,23 +152,23 @@ curbRight.position.set(2.35, -0.15, 0);
 curbRight.receiveShadow = true;
 scene.add(curbRight);
 
-// --- ПОЛОСКИ РАЗМЕТКИ ---
+// --- ПОЛОСКИ РАЗМЕТКИ (БЕСКОНЕЧНЫЕ) ---
 const lineMat = new THREE.MeshStandardMaterial({ color: 0xffdd99 });
 const lines = [];
-for (let i = -40; i <= 40; i+=3) {
+const lineCount = 27; // интервал 3 м от -40 до 40
+for (let i = 0; i < lineCount; i++) {
     const line = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.6), lineMat);
-    line.position.set(0, -0.15, i);
+    line.position.set(0, -0.15, -40 + i * 3);
     line.castShadow = false;
     scene.add(line);
     lines.push(line);
 }
 
-// --- ЛАНДШАФТ ---
+// --- ЛАНДШАФТ (деревья, холмы, камни) ---
 const landscapeGroup = new THREE.Group();
 scene.add(landscapeGroup);
 
 function addScenery() {
-    // Деревья
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
     const crownMat = new THREE.MeshStandardMaterial({ color: 0x5A9E4E });
     for (let i = -35; i <= 35; i+=4) {
@@ -193,7 +193,6 @@ function addScenery() {
         rightGroup.position.set(4.8, -0.25, i);
         landscapeGroup.add(rightGroup);
     }
-    // Холмы
     const hillMat = new THREE.MeshStandardMaterial({ color: 0x6a9e4b });
     for (let i = -30; i <= 30; i+=6) {
         for (let side of [-1,1]) {
@@ -206,7 +205,6 @@ function addScenery() {
             landscapeGroup.add(hill);
         }
     }
-    // Камни
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0x888888 });
     for (let i=0;i<140;i++) {
         const z = (Math.random()-0.5)*80;
@@ -218,7 +216,6 @@ function addScenery() {
         stone.castShadow = true;
         landscapeGroup.add(stone);
     }
-    // Кустики
     const grassMat2 = new THREE.MeshStandardMaterial({ color: 0x5cad3a });
     for (let i=0;i<400;i++) {
         const z = (Math.random()-0.5)*90;
@@ -267,7 +264,7 @@ car.add(headlightPoint);
 headlightPoint.position.set(0, 0.3, 1.2);
 scene.add(car);
 
-// --- ВЫХЛОП (ЧАСТИЦЫ) ---
+// --- ВЫХЛОП (частицы) ---
 const particleCount = 200;
 const particleGeo = new THREE.BufferGeometry();
 const posArray = new Float32Array(particleCount*3);
@@ -277,31 +274,30 @@ const particles = new THREE.Points(particleGeo, particleMat);
 car.add(particles);
 let exhaustOn = false;
 
-// --- ДВИЖЕНИЕ ПОЛОСОК И ЛАНДШАФТА (ИСПРАВЛЕНО) ---
-let scroll = 0;
+// --- БЕСКОНЕЧНОЕ ДВИЖЕНИЕ (ПОЛОСКИ + ЛАНДШАФТ) ---
 const speed = 0.12;
+const roadLength = 80; // от -40 до 40
 
 function updateScenery() {
     requestAnimationFrame(updateScenery);
-    scroll += speed;
-
-    // Полоски движутся навстречу (уменьшаем Z)
-    lines.forEach((line, idx) => {
-        let z = -40 + idx * 3;
-        z -= scroll;               // движение на камеру
-        if (z < -40) z += 80;
-        line.position.z = z;
+    // Двигаем полоски
+    lines.forEach(line => {
+        line.position.z -= speed;
+        if (line.position.z < -40) {
+            line.position.z += roadLength;
+        }
     });
-
-    // Ландшафт тоже навстречу
+    // Двигаем ландшафт
     landscapeGroup.children.forEach(obj => {
         obj.position.z -= speed;
-        if (obj.position.z < -48) obj.position.z += 96;
+        if (obj.position.z < -48) {
+            obj.position.z += roadLength + 16; // компенсация
+        }
     });
 }
 updateScenery();
 
-// --- ВРЕМЯ СУТОК ---
+// --- ВРЕМЯ СУТОК (исправлено) ---
 const timeSlider = document.getElementById('timeSlider');
 const timeDisplay = document.getElementById('timeDisplay');
 function updateTime(hour) {
