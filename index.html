@@ -36,6 +36,15 @@
         }
         button:hover { background: #ff8833; }
         .slider { width: 140px; cursor: pointer; }
+        input {
+            background: #333;
+            border: 1px solid #ff6600;
+            border-radius: 40px;
+            padding: 6px 12px;
+            color: white;
+            width: 110px;
+            text-align: center;
+        }
         #timeDisplay {
             background: black;
             color: white;
@@ -56,11 +65,8 @@
     <div class="row">💡 <button id="lightsBtn">Фары Выкл</button></div>
     <div class="row">💨 <button id="exhaustBtn">Выхлоп Выкл</button></div>
     <div class="row">
-        🎵 <select id="trackSelect">
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">Трек 1</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3">Трек 2</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3">Трек 3</option>
-        </select>
+        🎵 <input type="text" id="ngID" placeholder="ID трека Newgrounds" size="8">
+        <button id="loadBtn">Загрузить</button>
         <button id="musicBtn">🎵 Вкл</button>
     </div>
 </div>
@@ -155,7 +161,7 @@ scene.add(curbRight);
 // --- ПОЛОСКИ РАЗМЕТКИ (БЕСКОНЕЧНЫЕ) ---
 const lineMat = new THREE.MeshStandardMaterial({ color: 0xffdd99 });
 const lines = [];
-const lineCount = 27; // интервал 3 м от -40 до 40
+const lineCount = 27;
 for (let i = 0; i < lineCount; i++) {
     const line = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.6), lineMat);
     line.position.set(0, -0.15, -40 + i * 3);
@@ -164,7 +170,7 @@ for (let i = 0; i < lineCount; i++) {
     lines.push(line);
 }
 
-// --- ЛАНДШАФТ (деревья, холмы, камни) ---
+// --- ЛАНДШАФТ ---
 const landscapeGroup = new THREE.Group();
 scene.add(landscapeGroup);
 
@@ -274,30 +280,24 @@ const particles = new THREE.Points(particleGeo, particleMat);
 car.add(particles);
 let exhaustOn = false;
 
-// --- БЕСКОНЕЧНОЕ ДВИЖЕНИЕ (ПОЛОСКИ + ЛАНДШАФТ) ---
+// --- БЕСКОНЕЧНОЕ ДВИЖЕНИЕ ---
 const speed = 0.12;
-const roadLength = 80; // от -40 до 40
+const roadLength = 80;
 
 function updateScenery() {
     requestAnimationFrame(updateScenery);
-    // Двигаем полоски
     lines.forEach(line => {
         line.position.z -= speed;
-        if (line.position.z < -40) {
-            line.position.z += roadLength;
-        }
+        if (line.position.z < -40) line.position.z += roadLength;
     });
-    // Двигаем ландшафт
     landscapeGroup.children.forEach(obj => {
         obj.position.z -= speed;
-        if (obj.position.z < -48) {
-            obj.position.z += roadLength + 16; // компенсация
-        }
+        if (obj.position.z < -48) obj.position.z += roadLength + 16;
     });
 }
 updateScenery();
 
-// --- ВРЕМЯ СУТОК (исправлено) ---
+// --- ВРЕМЯ СУТОК ---
 const timeSlider = document.getElementById('timeSlider');
 const timeDisplay = document.getElementById('timeDisplay');
 function updateTime(hour) {
@@ -377,36 +377,76 @@ function updateExhaust() {
 }
 updateExhaust();
 
-// --- МУЗЫКА ---
-let audio = null;
+// --- МУЗЫКА С NEWGROUNDS ---
+let currentAudio = null;
 let musicPlaying = false;
-const trackSelect = document.getElementById('trackSelect');
+const ngIDInput = document.getElementById('ngID');
+const loadBtn = document.getElementById('loadBtn');
 const musicBtn = document.getElementById('musicBtn');
-function playTrack() {
-    if (!audio) {
-        audio = new Audio();
-        audio.loop = true;
-        audio.volume = 0.5;
+
+async function loadSong(songId) {
+    // Останавливаем текущую музыку
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+        musicPlaying = false;
+        musicBtn.textContent = '🎵 Вкл';
+        musicBtn.style.background = '#ff6600';
     }
-    const url = trackSelect.value;
-    if (audio.src !== url) audio.src = url;
-    audio.play().then(() => {
+    
+    const url = `https://www.newgrounds.com/audio/download/${songId}`;
+    currentAudio = new Audio(url);
+    currentAudio.loop = true;
+    currentAudio.volume = 0.5;
+    
+    // Проверяем, загружается ли трек
+    currentAudio.addEventListener('canplaythrough', () => {
+        console.log(`Трек ${songId} готов к воспроизведению`);
+        ngIDInput.placeholder = 'Готово! Введите ID для прослушивания';
+    });
+    currentAudio.addEventListener('error', () => {
+        console.error(`Не удалось загрузить трек ${songId}`);
+        ngIDInput.placeholder = 'Ошибка! Трек не найден или недоступен';
+        currentAudio = null;
+    });
+}
+
+function toggleMusic() {
+    if (!currentAudio) {
+        alert('Сначала загрузите трек по ID');
+        return;
+    }
+    if (musicPlaying) {
+        currentAudio.pause();
+        musicPlaying = false;
+        musicBtn.textContent = '🎵 Вкл';
+        musicBtn.style.background = '#ff6600';
+    } else {
+        currentAudio.play().catch(err => {
+            console.log('Ошибка воспроизведения:', err);
+            alert('Не удалось запустить трек. Возможно, требуется повторная загрузка.');
+        });
         musicPlaying = true;
         musicBtn.textContent = '🔇 Выкл';
         musicBtn.style.background = '#444';
-    }).catch(e => console.log('Клик для музыки'));
-}
-function stopTrack() {
-    if (audio) { audio.pause(); musicPlaying = false; musicBtn.textContent = '🎵 Вкл'; musicBtn.style.background = '#ff6600'; }
-}
-musicBtn.addEventListener('click', () => { musicPlaying ? stopTrack() : playTrack(); });
-trackSelect.addEventListener('change', () => {
-    if (musicPlaying) {
-        const was = musicPlaying;
-        stopTrack();
-        if (was) setTimeout(() => playTrack(), 100);
     }
+}
+
+loadBtn.addEventListener('click', () => {
+    const rawId = ngIDInput.value.trim();
+    if (!rawId) {
+        alert('Введите числовой ID трека с Newgrounds');
+        return;
+    }
+    const songId = parseInt(rawId, 10);
+    if (isNaN(songId)) {
+        alert('ID должен быть числом');
+        return;
+    }
+    loadSong(songId);
 });
+
+musicBtn.addEventListener('click', toggleMusic);
 
 // --- АНИМАЦИЯ КОЛЁС ---
 let wheelAngle = 0;
