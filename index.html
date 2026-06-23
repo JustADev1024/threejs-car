@@ -60,6 +60,15 @@
             font-weight: bold;
             mix-blend-mode: difference;
         }
+        .lang-btn {
+            background: #444;
+            padding: 4px 12px;
+            font-size: 13px;
+            min-width: 40px;
+        }
+        .lang-btn.active {
+            background: #ff6600;
+        }
         @media (max-width: 700px) {
             .row { flex-wrap: wrap; justify-content: stretch; }
             button, select, input, .slider { flex: 1; min-width: 80px; }
@@ -68,44 +77,33 @@
 </head>
 <body>
 <div id="controls">
+    <!-- Переключатель языка -->
+    <div class="row" id="langRow">
+        <span id="langLabel">Language:</span>
+        <button id="langEn" class="lang-btn active">EN</button>
+        <button id="langRu" class="lang-btn">RU</button>
+    </div>
     <!-- Время суток -->
     <div class="row">
-        <span>🌞🌙</span>
+        <span id="timeLabel">Time of day</span>
         <input type="range" id="timeSlider" min="0" max="24" step="0.1" value="14" class="slider">
         <span id="timeDisplay">14:00</span>
     </div>
     <!-- Фары и выхлоп -->
     <div class="row">
-        <button id="lightsBtn">💡 Фары Выкл</button>
-        <button id="exhaustBtn">💨 Выхлоп Выкл</button>
+        <button id="lightsBtn">💡 Headlights Off</button>
+        <button id="exhaustBtn">💨 Exhaust Off</button>
     </div>
-    <!-- Музыка: выбор предустановленных треков SoundHelix (1-16) -->
+    <!-- Музыка -->
     <div class="row">
-        <span>🎵 Трек:</span>
-        <select id="trackSelect">
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3">Трек 1</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3">Трек 2</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3">Трек 3</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3">Трек 4</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3">Трек 5</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3">Трек 6</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3">Трек 7</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3">Трек 8</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3">Трек 9</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3">Трек 10</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3">Трек 11</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3">Трек 12</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3">Трек 13</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3">Трек 14</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3">Трек 15</option>
-            <option value="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3">Трек 16</option>
-        </select>
-        <button id="musicBtn">🎵 Вкл</button>
+        <span>🎵</span>
+        <select id="trackSelect"></select>
+        <button id="musicBtn">🎵 Play</button>
     </div>
     <!-- Добавление своей MP3-ссылки -->
     <div class="row">
-        <input type="text" id="customUrl" placeholder="➕ Прямая ссылка на MP3 (с Newgrounds или другого сайта)" style="flex:2;">
-        <button id="addTrackBtn">➕ Добавить</button>
+        <input type="text" id="customUrl" placeholder="➕ Direct MP3 link (from Newgrounds or other site)" style="flex:2;">
+        <button id="addTrackBtn">➕ Add</button>
     </div>
 </div>
 
@@ -121,6 +119,147 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// --- ПЕРЕВОДЫ ---
+const translations = {
+    en: {
+        langLabel: 'Language:',
+        timeLabel: 'Time of day',
+        lightsOff: '💡 Headlights Off',
+        lightsOn: '💡 Headlights On',
+        exhaustOff: '💨 Exhaust Off',
+        exhaustOn: '💨 Exhaust On',
+        musicOff: '🎵 Play',
+        musicOn: '🔇 Stop',
+        addTrack: '➕ Add',
+        placeholder: '➕ Direct MP3 link (from Newgrounds or other site)',
+        trackPrefix: 'Track',
+        customTrackPrefix: 'Custom track:',
+        alertNoTrack: 'No tracks available. Add your own MP3 link.',
+        alertInvalidUrl: 'Link must point directly to an MP3 file (usually ends with .mp3)',
+        alertTrackAdded: 'Track added to list. Select it and press "Play".',
+        alertPlayError: 'Failed to play track. Check the link (must be direct .mp3) and CORS availability.',
+        alertEnterUrl: 'Enter a link to an MP3 file',
+    },
+    ru: {
+        langLabel: 'Язык:',
+        timeLabel: 'Время суток',
+        lightsOff: '💡 Фары Выкл',
+        lightsOn: '💡 Фары Вкл',
+        exhaustOff: '💨 Выхлоп Выкл',
+        exhaustOn: '💨 Выхлоп Вкл',
+        musicOff: '🎵 Вкл',
+        musicOn: '🔇 Выкл',
+        addTrack: '➕ Добавить',
+        placeholder: '➕ Прямая ссылка на MP3 (с Newgrounds или другого сайта)',
+        trackPrefix: 'Трек',
+        customTrackPrefix: 'Свой трек:',
+        alertNoTrack: 'Нет доступных треков. Добавьте свою MP3-ссылку.',
+        alertInvalidUrl: 'Ссылка должна вести напрямую на MP3 файл (обычно заканчивается на .mp3)',
+        alertTrackAdded: 'Трек добавлен в список. Выберите его и нажмите "Вкл".',
+        alertPlayError: 'Не удалось воспроизвести трек. Проверьте ссылку (должна быть прямой на .mp3) и доступность CORS.',
+        alertEnterUrl: 'Введите ссылку на MP3 файл',
+    }
+};
+
+// --- СОСТОЯНИЕ ЯЗЫКА ---
+let currentLang = 'en';
+
+// --- ЭЛЕМЕНТЫ UI ---
+const langLabel = document.getElementById('langLabel');
+const timeLabel = document.getElementById('timeLabel');
+const lightsBtn = document.getElementById('lightsBtn');
+const exhaustBtn = document.getElementById('exhaustBtn');
+const musicBtn = document.getElementById('musicBtn');
+const addTrackBtn = document.getElementById('addTrackBtn');
+const customUrlInput = document.getElementById('customUrl');
+const trackSelect = document.getElementById('trackSelect');
+const langEnBtn = document.getElementById('langEn');
+const langRuBtn = document.getElementById('langRu');
+
+// --- СОСТОЯНИЯ КНОПОК ---
+let lightsOn = true;
+let exhaustOn = false;
+let musicPlaying = false;
+
+// --- СПИСОК ТРЕКОВ (предустановленные 16) ---
+const presetUrls = Array.from({ length: 16 }, (_, i) => 
+    `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${i+1}.mp3`
+);
+let trackList = presetUrls.map((url, idx) => ({ url, isCustom: false, index: idx }));
+let currentAudio = null;
+
+// --- ФУНКЦИИ ПЕРЕВОДА ---
+function t(key) {
+    return translations[currentLang][key] || key;
+}
+
+function updateUI() {
+    // Статические тексты
+    langLabel.textContent = t('langLabel');
+    timeLabel.textContent = t('timeLabel');
+    customUrlInput.placeholder = t('placeholder');
+    addTrackBtn.textContent = t('addTrack');
+
+    // Кнопки с состояниями
+    updateLightsButton();
+    updateExhaustButton();
+    updateMusicButton();
+
+    // Обновить список треков
+    buildTrackOptions();
+
+    // Активная кнопка языка
+    langEnBtn.classList.toggle('active', currentLang === 'en');
+    langRuBtn.classList.toggle('active', currentLang === 'ru');
+}
+
+function updateLightsButton() {
+    lightsBtn.textContent = lightsOn ? t('lightsOn') : t('lightsOff');
+    lightsBtn.style.background = lightsOn ? '#ff6600' : '#444';
+}
+
+function updateExhaustButton() {
+    exhaustBtn.textContent = exhaustOn ? t('exhaustOn') : t('exhaustOff');
+    exhaustBtn.style.background = exhaustOn ? '#ff6600' : '#444';
+}
+
+function updateMusicButton() {
+    musicBtn.textContent = musicPlaying ? t('musicOn') : t('musicOff');
+    musicBtn.style.background = musicPlaying ? '#444' : '#ff6600';
+}
+
+function buildTrackOptions() {
+    const currentVal = trackSelect.value;
+    trackSelect.innerHTML = '';
+    trackList.forEach((item, idx) => {
+        const opt = document.createElement('option');
+        opt.value = item.url;
+        let label;
+        if (item.isCustom) {
+            label = t('customTrackPrefix') + ' ' + (item.customLabel || item.url.substring(0, 30) + '…');
+        } else {
+            label = t('trackPrefix') + ' ' + (item.index + 1);
+        }
+        opt.textContent = label;
+        trackSelect.appendChild(opt);
+    });
+    if (currentVal && trackList.some(t => t.url === currentVal)) {
+        trackSelect.value = currentVal;
+    } else if (trackList.length > 0) {
+        trackSelect.value = trackList[0].url;
+    }
+}
+
+// --- ПЕРЕКЛЮЧЕНИЕ ЯЗЫКА ---
+function setLanguage(lang) {
+    if (lang === currentLang) return;
+    currentLang = lang;
+    updateUI();
+}
+
+langEnBtn.addEventListener('click', () => setLanguage('en'));
+langRuBtn.addEventListener('click', () => setLanguage('ru'));
 
 // --- СЦЕНА, КАМЕРА, РЕНДЕР ---
 const scene = new THREE.Scene();
@@ -316,7 +455,7 @@ particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 const particleMat = new THREE.PointsMaterial({ color: 0xccccaa, size: 0.08, transparent: true });
 const particles = new THREE.Points(particleGeo, particleMat);
 car.add(particles);
-let exhaustOn = false;
+let exhaustOnState = false; // дублируем для частиц
 
 // --- БЕСКОНЕЧНОЕ ДВИЖЕНИЕ ---
 const speed = 0.12;
@@ -371,36 +510,29 @@ function updateTime(hour) {
 timeSlider.addEventListener('input', e => updateTime(parseFloat(e.target.value)));
 updateTime(14);
 
-// --- ФАРЫ (исправлено: текст и эмодзи) ---
-let lightsOn = true;
-const lightsBtn = document.getElementById('lightsBtn');
+// --- ФАРЫ ---
 lightsBtn.addEventListener('click', () => {
     lightsOn = !lightsOn;
     headlightModel.material.emissiveIntensity = lightsOn ? 1.2 : 0;
     headlightSpot.intensity = lightsOn ? 1.5 : 0;
     headlightPoint.intensity = lightsOn ? 0.8 : 0;
-    lightsBtn.textContent = lightsOn ? "💡 Фары Выкл" : "💡 Фары Вкл";
-    lightsBtn.style.background = lightsOn ? '#ff6600' : '#444';
+    updateLightsButton();
 });
 // начальное состояние (фары включены)
-lightsBtn.textContent = "💡 Фары Выкл";
-lightsBtn.style.background = '#ff6600';
 headlightModel.material.emissiveIntensity = 1.2;
 headlightSpot.intensity = 1.5;
 headlightPoint.intensity = 0.8;
 
-// --- ВЫХЛОП (исправлено) ---
-const exhaustBtn = document.getElementById('exhaustBtn');
+// --- ВЫХЛОП ---
 exhaustBtn.addEventListener('click', () => {
     exhaustOn = !exhaustOn;
-    exhaustBtn.textContent = exhaustOn ? "💨 Выхлоп Вкл" : "💨 Выхлоп Выкл";
-    exhaustBtn.style.background = exhaustOn ? '#ff6600' : '#444';
+    exhaustOnState = exhaustOn;
+    updateExhaustButton();
 });
-exhaustBtn.textContent = "💨 Выхлоп Выкл";
-exhaustBtn.style.background = '#444';
+exhaustOnState = false;
 
 function updateExhaust() {
-    if (!exhaustOn) { particles.visible = false; requestAnimationFrame(updateExhaust); return; }
+    if (!exhaustOnState) { particles.visible = false; requestAnimationFrame(updateExhaust); return; }
     particles.visible = true;
     const positions = particles.geometry.attributes.position.array;
     for (let i = 0; i < particleCount; i++) {
@@ -422,14 +554,7 @@ function updateExhaust() {
 }
 updateExhaust();
 
-// --- МУЗЫКА (16 предустановок + добавление своих ссылок) ---
-let currentAudio = null;
-let musicPlaying = false;
-const trackSelect = document.getElementById('trackSelect');
-const musicBtn = document.getElementById('musicBtn');
-const customUrlInput = document.getElementById('customUrl');
-const addTrackBtn = document.getElementById('addTrackBtn');
-
+// --- МУЗЫКА ---
 function playTrack(url) {
     if (currentAudio) {
         currentAudio.pause();
@@ -440,13 +565,13 @@ function playTrack(url) {
     currentAudio.volume = 0.5;
     currentAudio.play().then(() => {
         musicPlaying = true;
-        musicBtn.textContent = '🔇 Выкл';
-        musicBtn.style.background = '#444';
+        updateMusicButton();
     }).catch(e => {
-        console.error('Ошибка воспроизведения:', e);
+        console.error('Play error:', e);
         musicPlaying = false;
         currentAudio = null;
-        alert('Не удалось воспроизвести трек. Проверьте ссылку (должна быть прямой на .mp3) и доступность CORS.');
+        alert(t('alertPlayError'));
+        updateMusicButton();
     });
 }
 
@@ -456,8 +581,7 @@ function stopMusic() {
         currentAudio = null;
     }
     musicPlaying = false;
-    musicBtn.textContent = '🎵 Вкл';
-    musicBtn.style.background = '#ff6600';
+    updateMusicButton();
 }
 
 function toggleMusic() {
@@ -466,7 +590,7 @@ function toggleMusic() {
     } else {
         const selectedUrl = trackSelect.value;
         if (!selectedUrl) {
-            alert('Нет доступных треков. Добавьте свою MP3-ссылку.');
+            alert(t('alertNoTrack'));
             return;
         }
         playTrack(selectedUrl);
@@ -476,24 +600,41 @@ function toggleMusic() {
 function addCustomTrack() {
     let url = customUrlInput.value.trim();
     if (!url) {
-        alert('Введите ссылку на MP3 файл');
+        alert(t('alertEnterUrl'));
         return;
     }
     if (!url.match(/\.mp3($|\?)/i)) {
-        alert('Ссылка должна вести напрямую на MP3 файл (обычно заканчивается на .mp3)');
+        alert(t('alertInvalidUrl'));
         return;
     }
-    const option = document.createElement('option');
-    option.value = url;
-    option.textContent = `Свой трек: ${url.substring(0, 40)}${url.length>40 ? '…' : ''}`;
-    trackSelect.appendChild(option);
+    // Проверяем, нет ли уже такого URL
+    if (trackList.some(t => t.url === url)) {
+        // если есть, просто выбираем его
+        trackSelect.value = url;
+        customUrlInput.value = '';
+        if (musicPlaying) {
+            stopMusic();
+            playTrack(url);
+        } else {
+            alert(t('alertTrackAdded'));
+        }
+        return;
+    }
+    const newTrack = {
+        url: url,
+        isCustom: true,
+        customLabel: url.substring(0, 40) + (url.length>40 ? '…' : ''),
+        index: trackList.length
+    };
+    trackList.push(newTrack);
+    buildTrackOptions();
     trackSelect.value = url;
     customUrlInput.value = '';
     if (musicPlaying) {
         stopMusic();
         playTrack(url);
     } else {
-        alert('Трек добавлен в список. Выберите его и нажмите "Вкл".');
+        alert(t('alertTrackAdded'));
     }
 }
 
@@ -511,6 +652,9 @@ trackSelect.addEventListener('change', () => {
         }
     }
 });
+
+// --- ИНИЦИАЛИЗАЦИЯ UI ---
+updateUI();
 
 // --- АНИМАЦИЯ КОЛЁС ---
 let wheelAngle = 0;
